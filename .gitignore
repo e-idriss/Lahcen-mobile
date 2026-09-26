@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
+
+# Local env — never commit secrets
+.env
+.env.local
+
+# Native build output (managed workflow regenerates these)
+/ios
+/android
+scripts/almaghribi-preview/out/
