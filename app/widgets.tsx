@@ -34,11 +34,11 @@ import { getPrayerTimes } from '../src/features/prayer/prayerService';
 import { usePrayerStore } from '../src/features/prayer/prayerStore';
 import { useMinuteTick } from '../src/features/prayer/useMinuteTick';
 import { useSurahList } from '../src/features/reader/useQuranData';
-import { useSettings } from '../src/store/settings';
+import { useLastRead } from '../src/store/settings';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
 import { toArabicDigits } from '../src/utils/arabicDigits';
-import { getHijriToday } from '../src/utils/hijriDate';
+import { WEEKDAYS_AR, getHijriToday } from '../src/utils/hijriDate';
 import { saveImageToGallery } from '../src/utils/saveToGallery';
 import { syncWidgets } from '../src/features/widgets';
 import {
@@ -53,6 +53,7 @@ import {
   type LastReadWidgetPayload,
   type NextPrayerWidgetPayload,
 } from '../src/utils/widgetSync';
+import { getPrayerCalligraphyKey } from '../src/features/prayer/prayerCalligraphy';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -106,22 +107,6 @@ const WIDGET_THEMES: Array<{
   { id: 'glass', name: 'زجاجي', colorPreview: '#25201B', accentColor: '#FFEED6' },
 ];
 
-function getPrayerCalligraphyKey(key?: string): string | null {
-  switch (key) {
-    case 'fajr':
-      return '3';
-    case 'dhuhr':
-      return '4';
-    case 'asr':
-      return '5';
-    case 'maghrib':
-      return '6';
-    case 'isha':
-      return '7';
-    default:
-      return null;
-  }
-}
 
 export default function WidgetsScreen() {
   const { colors } = useTheme();
@@ -140,7 +125,7 @@ export default function WidgetsScreen() {
 
   // Live App Data
   const { data: surahs } = useSurahList();
-  const lastRead = useSettings((s) => s.lastRead);
+  const lastRead = useLastRead();
   const lat = usePrayerStore((s) => s.latitude);
   const lng = usePrayerStore((s) => s.longitude);
   const cityName = usePrayerStore((s) => s.cityName);
@@ -209,7 +194,7 @@ export default function WidgetsScreen() {
     return {
       day: today.dayOfMonth,
       dayArabic: toArabicDigits(today.dayOfMonth),
-      weekdayName: today.monthNameAr,
+      weekdayName: WEEKDAYS_AR[today.weekday],
       weekdayLigature: today.weekdayLigature,
       monthNameAr: today.monthNameAr,
       monthLigature: today.monthLigature,
@@ -231,10 +216,8 @@ export default function WidgetsScreen() {
       surahNameAr: lastReadSurah?.nameAr || 'البقرة',
       ayahNumber: lastRead?.ayah ?? 137,
       ayahArabic: toArabicDigits(lastRead?.ayah ?? 137),
-      pageNumber: lastReadSurah?.startIndex ? Math.floor(lastReadSurah.startIndex / 15) + 1 : 21,
-      pageArabic: toArabicDigits(
-        lastReadSurah?.startIndex ? Math.floor(lastReadSurah.startIndex / 15) + 1 : 21,
-      ),
+      pageNumber: lastRead?.page ?? 21,
+      pageArabic: toArabicDigits(lastRead?.page ?? 21),
       juzNumber: 1,
       juzArabic: '١',
       updatedAt: new Date().toISOString(),

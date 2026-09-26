@@ -26,6 +26,7 @@ import type {
   LastReadWidgetPayload,
   NextPrayerWidgetPayload,
 } from '../../utils/widgetSync';
+import { surahFontName } from '../../utils/surahFontName';
 
 export type WidgetType = 'prayer' | 'hijri' | 'lastRead' | 'dailyAyah';
 export type WidgetSize = 'small' | 'medium' | 'large';
@@ -472,7 +473,7 @@ function LastReadWidgetContent({
           allowFontScaling={false}
           numberOfLines={1}
         >
-          سورة {surahName}
+          سورة {surahFontName(surahName)}
         </Text>
 
         <Text style={[styles.ayahBadgeSmall, { color: theme.goldBright }]}>
@@ -498,7 +499,7 @@ function LastReadWidgetContent({
           style={[styles.surahNameMedium, { color: theme.textMain }]}
           allowFontScaling={false}
         >
-          سورة {surahName}
+          سورة {surahFontName(surahName)}
         </Text>
 
         <View style={styles.lastReadMetaRow}>
@@ -543,7 +544,7 @@ function LastReadWidgetContent({
           style={[styles.surahNameLarge, { color: theme.textMain }]}
           allowFontScaling={false}
         >
-          سورة {surahName}
+          سورة {surahFontName(surahName)}
         </Text>
         <Text style={[styles.ayahLargeNumber, { color: theme.goldBright }]}>
           الآية المباركة {ayah}

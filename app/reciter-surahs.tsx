@@ -31,6 +31,7 @@ import type { AudioTrack, Moshaf, Reciter } from '../src/features/audio/types';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
 import { toArabicDigits } from '../src/utils/arabicDigits';
+import { surahFontName } from '../src/utils/surahFontName';
 
 /**
  * Parses the `reciterJson` route param into a Reciter, or null.
@@ -288,7 +289,7 @@ export default function ReciterSurahsScreen() {
                   ]}
                   allowFontScaling={false}
                 >
-                  سورة {item.nameAr}
+                  سورة {surahFontName(item.nameAr)}
                 </Text>
                 <Text style={[styles.surahMeta, { color: colors.textSecond }]}>
                   {item.revelation === 'Meccan' ? 'مكية' : 'مدنية'} • {toArabicDigits(item.ayahCount)} آية

@@ -2,7 +2,7 @@
  * Animated Splash Screen.
  *
  * Minimalist, elegant entrance experience featuring:
- * - Authentic paper background (#FFEED6)
+ * - Off-white paper background (colors.bg)
  * - Pure Lahcen calligraphy SVG emblem in the center
  * - Traditional brown Arabesque corner decorations (decor.svg) in all 4 corners
  * - NO text / labels
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { useTheme } from '../../theme/ThemeProvider';
+import { BRAND_PRIMARY } from '../../theme/tokens';
 import { DecorCorner } from './DecorCorner';
 import { LahcenLogo } from './LahcenLogo';
 
@@ -78,7 +79,7 @@ export function AnimatedSplashScreen({ isReady, onAnimationFinish }: Props) {
     }
   }, [isReady, onAnimationFinish, splashExitOpacity]);
 
-  const cornerColor = '#8d6443';
+  const cornerColor = BRAND_PRIMARY;
 
   return (
     <Animated.View

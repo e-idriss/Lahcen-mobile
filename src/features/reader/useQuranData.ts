@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getAllSurahs,
   getAyahsForSurah,
+  getPageIndex,
   search as runSearch,
   type Ayah,
   type SearchHit,
   type Surah,
 } from '../../data/database';
+import { pageForAyah } from '../../data/navigation';
 import { useSettings } from '../../store/settings';
 
 interface AsyncState<T> {
@@ -171,4 +173,46 @@ export function useSearch() {
   }, []);
 
   return { query, setQuery, results, loading, clear };
+}
+
+/**
+ * `(surah, ayah) → page` for the riwaya being read. Hafs resolves through
+ * `quran-meta`; Warsh through its own table, since it paginates and numbers
+ * ayahs differently. An ayah number missing from the riwaya falls back to the
+ * closest earlier ayah of that surah.
+ */
+export function usePageForAyah(): (surah: number, ayah: number) => number {
+  const riwaya = useSettings((s) => s.riwaya);
+  const [index, setIndex] = useState<Map<number, number[]> | null>(null);
+
+  useEffect(() => {
+    if (riwaya === 'hafs') {
+      setIndex(null);
+      return;
+    }
+    let active = true;
+    getPageIndex(riwaya)
+      .then((loaded) => {
+        if (active) setIndex(loaded);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [riwaya]);
+
+  return useCallback(
+    (surah: number, ayah: number) => {
+      const pages = riwaya === 'warsh' ? index?.get(surah) : undefined;
+      if (pages && pages.length > 0) {
+        return pages[Math.min(Math.max(ayah, 1), pages.length) - 1] ?? pages[0];
+      }
+      try {
+        return pageForAyah(surah, ayah);
+      } catch {
+        return pageForAyah(surah, 1);
+      }
+    },
+    [riwaya, index],
+  );
 }

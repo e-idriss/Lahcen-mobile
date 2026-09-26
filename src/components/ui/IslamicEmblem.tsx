@@ -9,6 +9,8 @@
 import { memo, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { BRAND_PRIMARY } from '../../theme/tokens';
+
 interface Props {
   size?: number;
   color?: string;
@@ -20,7 +22,7 @@ interface Props {
 
 function IslamicEmblemComponent({
   size = 40,
-  color = '#827148',
+  color = BRAND_PRIMARY,
   fillColor = 'transparent',
   innerBorderColor,
   style,

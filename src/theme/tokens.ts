@@ -5,60 +5,66 @@
  * is missing here, add it here rather than inlining it (see CLAUDE.md).
  */
 
+/** Brand colour (logo, primary actions, active states, ornament). */
+export const BRAND_PRIMARY = '#8F2D23';
+
 export const palette = {
   light: {
-    bg: '#FFEED6', // warm cream paper
-    surface: '#FFF9F0', // raised card parchment
-    surfaceSunk: '#F5E3C7', // wells, search bar
-    border: '#E4CFB2', // hairlines
-    textPrimary: '#2D2619', // near-black, warm charcoal-brown
-    textSecond: '#6E624E', // metadata
-    textMuted: '#9C8F79', // ayah numbers, hints
-    accent: '#827148', // earthy golden olive — primary action/state
-    accentSoft: '#EDF1E2', // soft sage wash for selection
-    gold: '#827148', // antique gold ornament
-    goldSoft: '#DECFA9', // soft gold hairline
-    sage: '#A5AF79', // herbaceous sage green
-    sageSoft: '#EAF0DB', // soft sage badge
-    terracotta: '#E8A07C', // warm terracotta highlight
-    terracottaSoft: '#FDEEE7', // soft terracotta badge
-    overlayScrim: 'rgba(30, 24, 16, 0.45)', // mosque image overlay
+    bg: '#FAF7F2', // warm off-white paper — never pure #FFF
+    surface: '#FFFDFA', // raised card
+    surfaceSunk: '#F2ECE4', // wells, search bar
+    border: '#E8DDD2', // hairlines
+    textPrimary: '#2A1F1B', // warm near-black
+    textSecond: '#6B5A52', // metadata
+    textMuted: '#9A8A80', // ayah numbers, hints
+    accent: BRAND_PRIMARY, // primary action/state
+    accentSoft: '#F5E4E1', // soft brand wash for selection
+    onAccent: '#FFFDFA', // text/icons on an accent fill
+    gold: BRAND_PRIMARY, // ornament, icons, active state
+    goldSoft: '#EBD9D3', // soft brand hairline
+    sage: '#8A9A5B', // herbaceous sage green
+    sageSoft: '#EDF1E2', // soft sage badge
+    terracotta: '#D9825F', // warm terracotta highlight
+    terracottaSoft: '#FBEDE7', // soft terracotta badge
+    overlayScrim: 'rgba(40, 20, 14, 0.4)', // hero image overlay
   },
   dark: {
-    bg: '#151310', // warm near-black obsidian
-    surface: '#211E18', // raised surface
-    surfaceSunk: '#1A1713', // wells
-    border: '#363025', // hairlines
-    textPrimary: '#FFEED6', // warm cream text
-    textSecond: '#C2B59F', // warm metadata
-    textMuted: '#827763', // muted hints
-    accent: '#A5AF79', // luminous sage green
-    accentSoft: '#2C3320', // dark sage wash
-    gold: '#D6B46F', // radiant antique gold
-    goldSoft: '#3E3420', // dark gold outline
+    bg: '#151211', // warm near-black
+    surface: '#211C1A', // raised surface
+    surfaceSunk: '#1A1615', // wells
+    border: '#382E2B', // hairlines
+    textPrimary: '#F7EFE8', // warm off-white text
+    textSecond: '#C2B3AA', // warm metadata
+    textMuted: '#857770', // muted hints
+    accent: '#D9695B', // brand red, lifted for contrast on dark
+    accentSoft: '#3A1D19', // dark brand wash
+    onAccent: '#1A0E0C', // text/icons on the lifted accent
+    gold: '#D9695B', // brand red, lifted for contrast on dark
+    goldSoft: '#43302C', // dark brand outline
     sage: '#A5AF79',
     sageSoft: '#28301D',
     terracotta: '#E8A07C',
     terracottaSoft: '#3D251C',
-    overlayScrim: 'rgba(0, 0, 0, 0.65)',
+    overlayScrim: 'rgba(0, 0, 0, 0.6)',
   },
   sepia: {
-    bg: '#F7EAD7',
-    surface: '#FCF4E8',
-    surfaceSunk: '#EED8BE',
-    border: '#DDC5A6',
-    textPrimary: '#382C1B',
-    textSecond: '#735E44',
-    textMuted: '#9C876D',
-    accent: '#827148',
-    accentSoft: '#ECE0CA',
-    gold: '#827148',
-    goldSoft: '#DFCEAB',
-    sage: '#A5AF79',
+    bg: '#F7EDE0',
+    surface: '#FCF6EE',
+    surfaceSunk: '#EEDFCD',
+    border: '#E0CDB8',
+    textPrimary: '#38271E',
+    textSecond: '#735C4C',
+    textMuted: '#9C8573',
+    accent: BRAND_PRIMARY,
+    accentSoft: '#F1DDD6',
+    onAccent: '#FFFDFA',
+    gold: BRAND_PRIMARY,
+    goldSoft: '#E6D0C6',
+    sage: '#8A9A5B',
     sageSoft: '#E6ECCF',
-    terracotta: '#E8A07C',
+    terracotta: '#D9825F',
     terracottaSoft: '#FBEAE2',
-    overlayScrim: 'rgba(30, 24, 16, 0.45)',
+    overlayScrim: 'rgba(40, 20, 14, 0.4)',
   },
 } as const;
 
@@ -119,8 +125,9 @@ export const fonts = {
    */
   hijriMonth: 'ElgharibHijriMonths',
   /**
-   * Dingbat-style font: feed it ONLY the ligature keys "1".."7" (1 = Sunday)
-   * to render the illuminated weekday name. Any other text renders nothing.
+   * Dingbat-style font: feed it ONLY a key from WEEKDAY_LIGATURE_KEYS
+   * (utils/hijriDate.ts: "1".."6" = Sunday..Friday, "0" = Saturday — "7" is
+   * الأسبوع, not Saturday) to render the illuminated weekday name.
    */
   hijriWeekday: 'ElgharibDaysOfWeek',
   /**

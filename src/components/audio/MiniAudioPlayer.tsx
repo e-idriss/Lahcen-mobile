@@ -13,6 +13,7 @@ import { useAudioStore } from '../../features/audio/audioStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { HIT_SLOP, fonts, radius, spacing } from '../../theme/tokens';
 import { IslamicEmblem } from '../ui/IslamicEmblem';
+import { surahFontName } from '../../utils/surahFontName';
 
 export function MiniAudioPlayer() {
   const { colors } = useTheme();
@@ -77,7 +78,7 @@ export function MiniAudioPlayer() {
           {/* Center in RTL: Surah & Reciter Info */}
           <View style={styles.infoCol}>
             <Text style={[styles.surahTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              سورة {currentTrack.surahNameAr}
+              سورة {surahFontName(currentTrack.surahNameAr)}
             </Text>
             <Text style={[styles.reciterName, { color: colors.textSecond }]} numberOfLines={1}>
               القارئ {currentTrack.reciterName}

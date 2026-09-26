@@ -20,8 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IslamicEmblem } from '../src/components/ui/IslamicEmblem';
 import type { SearchHit } from '../src/data/database';
-import { useSearch } from '../src/features/reader/useQuranData';
-import { useSettings } from '../src/store/settings';
+import { usePageForAyah, useSearch } from '../src/features/reader/useQuranData';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { HIT_SLOP, MIN_TOUCH_TARGET, arabicTextStyle, fonts, radius, spacing } from '../src/theme/tokens';
 import { toArabicDigits } from '../src/utils/arabicDigits';
@@ -32,14 +31,17 @@ export default function SearchScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { query, setQuery, results, loading } = useSearch();
-  const setLastRead = useSettings((s) => s.setLastRead);
+  const pageForAyah = usePageForAyah();
 
+  // Opening a result navigates to its page; it does not move the saved stopping point.
   const openHit = useCallback(
     (hit: SearchHit) => {
-      setLastRead({ surah: hit.surah, ayah: hit.ayah });
-      router.back();
+      router.dismissTo({
+        pathname: '/(tabs)/quran',
+        params: { page: String(pageForAyah(hit.surah, hit.ayah)), t: String(Date.now()) },
+      });
     },
-    [setLastRead],
+    [pageForAyah],
   );
 
   const renderItem = useCallback(

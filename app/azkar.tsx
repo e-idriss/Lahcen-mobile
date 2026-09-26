@@ -28,15 +28,15 @@ import {
   type ZekrItem,
 } from '../src/data/database';
 import { useTheme } from '../src/theme/ThemeProvider';
-import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
+import { BRAND_PRIMARY, HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
 
 // Essential daily categories for spotlight
 const DAILY_ESSENTIALS = [
   { title: 'أذكار الصباح', icon: 'sun', color: '#E8A07C' },
   { title: 'أذكار المساء', icon: 'moon', color: '#D6B46F' },
-  { title: 'أذكار النوم', icon: 'cloud-rain', color: '#827148' },
+  { title: 'أذكار النوم', icon: 'cloud-rain', color: BRAND_PRIMARY },
   { title: 'أذكار الاستيقاظ من النوم', icon: 'sunrise', color: '#A5AF79' },
-  { title: 'الأذكار بعد السلام من الصلاة', icon: 'check-circle', color: '#827148' },
+  { title: 'الأذكار بعد السلام من الصلاة', icon: 'check-circle', color: BRAND_PRIMARY },
   { title: 'الرقية الشرعية من القرآن الكريم', icon: 'shield', color: '#A5AF79' },
 ];
 

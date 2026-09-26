@@ -12,6 +12,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { buildAdhanNotificationContent } from './adhanNotificationContent';
 import { getPrayerTimes } from './prayerService';
 import type { CalculationMethodName, PrayerKey } from './types';
 
@@ -139,8 +140,7 @@ export async function reschedulePrayerNotifications({
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: `حان الآن موعد أذان ${prayer.nameAr}`,
-          body: 'الصلاة خير من النوم — حيّ على الصلاة',
+          ...buildAdhanNotificationContent(prayer.key, prayer.nameAr, item.timeFormatted),
           // Skip custom sound in Expo Go: the .mp3 is not bundled in that env.
           ...(IS_EXPO_GO ? {} : { sound: 'adhan-madina.mp3' }),
           data: { tag: DATA_TAG, prayer: prayer.key },

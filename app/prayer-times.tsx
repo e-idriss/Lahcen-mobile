@@ -7,7 +7,8 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { Image, ImageBackground } from 'expo-image';
+import { ImageBackground } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -27,11 +28,14 @@ import {
   CITY_PRESETS,
   getPrayerTimes,
 } from '../src/features/prayer/prayerService';
+import { PrayerTimeRow } from '../src/components/prayer/PrayerTimeRow';
+import { formatRemainingAr } from '../src/features/prayer/formatRemaining';
 import { usePrayerStore } from '../src/features/prayer/prayerStore';
 import type { CityPreset, PrayerKey } from '../src/features/prayer/types';
 import { useMinuteTick } from '../src/features/prayer/useMinuteTick';
 import { useTheme } from '../src/theme/ThemeProvider';
-import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
+import { BRAND_PRIMARY, HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
+import { WEEKDAYS_AR, getHijriToday } from '../src/utils/hijriDate';
 
 /**
  * Icon names are typed against Feather's own glyph union rather than `string`,
@@ -39,13 +43,24 @@ import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
  */
 type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
+// Text on the carpet photo: warm cream, soft shadow for legibility.
+const HERO_TEXT = '#FFF4E2';
+const HERO_TEXT_MUTED = '#F1E3C4';
+const HERO_GOLD = '#FCE38A';
+const HERO_SCRIM = ['rgba(38, 22, 10, 0.35)', 'rgba(38, 22, 10, 0.2)', 'rgba(38, 22, 10, 0.4)'] as const;
+const heroTextShadow = {
+  textShadowColor: 'rgba(30, 16, 6, 0.55)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+} as const;
+
 const PRAYER_ICONS: Record<PrayerKey, { icon: FeatherIconName; color: string }> = {
   fajr: { icon: 'sunrise', color: '#E8A07C' },
   sunrise: { icon: 'sun', color: '#D6B46F' },
-  dhuhr: { icon: 'sun', color: '#827148' },
+  dhuhr: { icon: 'sun', color: BRAND_PRIMARY },
   asr: { icon: 'cloud', color: '#A5AF79' },
   maghrib: { icon: 'sunset', color: '#E8A07C' },
-  isha: { icon: 'moon', color: '#827148' },
+  isha: { icon: 'moon', color: BRAND_PRIMARY },
 };
 
 export default function PrayerTimesScreen() {
@@ -74,6 +89,22 @@ export default function PrayerTimesScreen() {
     return getPrayerTimes(lat, lng, currentTime, calculationMethod, isHanafi);
   }, [lat, lng, currentTime, calculationMethod, isHanafi]);
 
+  const nextPrayer = prayerResult.nextPrayer;
+  const remainingLabel = formatRemainingAr(prayerResult.timeRemainingSeconds);
+  // Short form for the button ("أم القرى"); the full name stays in the picker.
+  const methodName = (
+    CALCULATION_METHODS_META.find((m) => m.key === calculationMethod)?.nameAr ?? 'طريقة الحساب'
+  ).replace(/\s*\(.*\)\s*$/, '');
+
+  const hijriLabel = useMemo(() => {
+    const hijri = getHijriToday();
+    return `${WEEKDAYS_AR[hijri.weekday]} ${hijri.dayOfMonth} ${hijri.monthNameAr} ${hijri.year} هـ`;
+  }, [currentTime]);
+  const gregorianLabel = useMemo(
+    () => currentTime.toLocaleDateString('ar-MA', { day: 'numeric', month: 'long', year: 'numeric' }),
+    [currentTime],
+  );
+
   const selectCity = useCallback(
     (city: CityPreset) => {
       setLocation(city.lat, city.lng, city.nameAr, false);
@@ -95,179 +126,108 @@ export default function PrayerTimesScreen() {
         bounces={false}
         overScrollMode="never"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 60 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing['2xl'] }}
       >
-        {/* Top Hero: Full-Width Mosque Backdrop (0 Margin Top / Left / Right) */}
+        {/* Hero: next prayer */}
         <ImageBackground
           source={require('../assets/images/mosque.jpg')}
-          style={[
-            styles.heroBackdrop,
-            {
-              borderBottomColor: colors.goldSoft,
-              paddingTop: insets.top + 8,
-            },
-          ]}
-          imageStyle={styles.heroImage}
+          style={[styles.hero, { paddingTop: insets.top + spacing.sm }]}
+          contentFit="cover"
         >
-          {/* Scrim overlay for rich contrast */}
-          <View style={[styles.scrim, { backgroundColor: colors.overlayScrim }]} />
+          <LinearGradient colors={HERO_SCRIM} style={StyleSheet.absoluteFill} />
 
-          <View style={styles.heroInnerContent}>
-            {/* Header Row */}
-            <View style={styles.headerRow}>
-              <Pressable
-                onPress={() => router.back()}
-                hitSlop={HIT_SLOP}
-                style={[styles.headerBtn, { backgroundColor: 'rgba(0, 0, 0, 0.55)', borderColor: 'rgba(255, 255, 255, 0.3)' }]}
-                accessibilityRole="button"
-                accessibilityLabel="رجوع"
-              >
-                <Feather name="arrow-right" size={20} color="#FFFFFF" />
-              </Pressable>
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={HIT_SLOP}
+              style={styles.headerIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="رجوع"
+            >
+              <Feather name="arrow-right" size={20} color={HERO_TEXT} />
+            </Pressable>
+            <Text style={styles.headerTitle}>مواقيت الصلاة</Text>
+            <Pressable
+              onPress={() => router.push('/qibla')}
+              hitSlop={HIT_SLOP}
+              style={styles.headerIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="اتجاه القبلة"
+            >
+              <Feather name="compass" size={19} color={HERO_TEXT} />
+            </Pressable>
+          </View>
 
-              <Text style={[styles.headerTitleText, { color: '#FFFFFF' }]}>
-                مواقيت الصلاة
-              </Text>
-
-              <Pressable
-                onPress={() => router.push('/qibla')}
-                hitSlop={HIT_SLOP}
-                style={[styles.qiblaHeaderBtn, { backgroundColor: 'rgba(0, 0, 0, 0.55)', borderColor: '#F5D77F' }]}
-                accessibilityRole="button"
-                accessibilityLabel="اتجاه القبلة"
-              >
-                <Feather name="compass" size={16} color="#F5D77F" />
-                <Text style={[styles.qiblaHeaderBtnText, { color: '#F5D77F' }]}>القبلة</Text>
-              </Pressable>
-            </View>
-
-            {/* Hero Countdown Info */}
-            <View style={styles.heroCountdownSection}>
-              <View style={[styles.nextBadge, { backgroundColor: 'rgba(232, 160, 124, 0.4)', borderColor: '#E8A07C' }]}>
-                <Text style={[styles.nextBadgeText, { color: '#FFFFFF' }]}>الصلاة القادمة</Text>
-              </View>
-
-              <Text style={[styles.heroPrayerName, { color: '#FFFFFF' }]}>
-                صلاة {prayerResult.nextPrayer?.nameAr || 'الفجر'}
-              </Text>
-
-              <Text style={[styles.heroTimeRemaining, { color: '#FCE38A' }]}>
-                {prayerResult.timeRemainingFormatted}
-              </Text>
-
-              <Text style={[styles.heroTargetTime, { color: '#FFFFFF' }]}>
-                موعد الأذان: {prayerResult.nextPrayer?.timeFormatted || '--:--'}
-              </Text>
+          <View style={styles.heroCenter}>
+            <Text style={styles.heroEyebrow}>الصلاة القادمة</Text>
+            <Text style={styles.heroPrayerName}>{nextPrayer?.nameAr ?? 'الفجر'}</Text>
+            <Text style={styles.heroAdhanTime}>{nextPrayer?.timeFormatted ?? '--:--'}</Text>
+            <View style={styles.heroCountdownPill}>
+              <Feather name="clock" size={13} color={HERO_TEXT} />
+              <Text style={styles.heroCountdownText}>{remainingLabel}</Text>
             </View>
           </View>
         </ImageBackground>
 
-        {/* All Prayers List Section (Rounded Top overlapping image) */}
-        <View
-          style={[
-            styles.prayersSection,
-            {
-              backgroundColor: colors.bg,
-              borderTopColor: colors.goldSoft,
-            },
-          ]}
-        >
-          {/* City & Calculation Method Selector Row */}
-          <View style={styles.bottomSelectorRow}>
-            <Pressable
-              onPress={() => setCityModalOpen(true)}
-              style={[
-                styles.selectorChip,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Feather name="map-pin" size={14} color={colors.gold} />
-              <Text style={[styles.selectorChipText, { color: colors.textPrimary }]}>
-                {cityName}
-              </Text>
-              <Feather name="chevron-down" size={14} color={colors.textMuted} />
-            </Pressable>
+        {/* Sheet: today's times */}
+        <View style={[styles.sheet, { backgroundColor: colors.bg }]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleCol}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>مواقيت اليوم</Text>
+              <Text style={[styles.sectionDate, { color: colors.textSecond }]}>{hijriLabel}</Text>
+              <Text style={[styles.sectionDate, { color: colors.textMuted }]}>{gregorianLabel}</Text>
+            </View>
 
-            <Pressable
-              onPress={() => setMethodModalOpen(true)}
-              style={[
-                styles.selectorChip,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Feather name="settings" size={14} color={colors.textSecond} />
-              <Text style={[styles.selectorChipText, { color: colors.textSecond }]}>
-                طريقة الحساب
-              </Text>
-              <Feather name="chevron-down" size={14} color={colors.textMuted} />
-            </Pressable>
+            {/* Location & calculation method */}
+            <View style={styles.settingsCol}>
+              <Pressable
+                onPress={() => setCityModalOpen(true)}
+                hitSlop={HIT_SLOP}
+                style={({ pressed }) => [
+                  styles.settingChip,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`المدينة: ${cityName}، تغيير`}
+              >
+                <Feather name="map-pin" size={13} color={colors.accent} />
+                <Text style={[styles.settingChipText, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {cityName}
+                </Text>
+                <Feather name="chevron-down" size={13} color={colors.textMuted} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => setMethodModalOpen(true)}
+                hitSlop={HIT_SLOP}
+                style={({ pressed }) => [
+                  styles.settingChip,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`طريقة الحساب: ${methodName}، تغيير`}
+              >
+                <Feather name="sliders" size={13} color={colors.accent} />
+                <Text style={[styles.settingChipText, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {methodName}
+                </Text>
+                <Feather name="chevron-down" size={13} color={colors.textMuted} />
+              </Pressable>
+            </View>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            مواقيت اليوم
-          </Text>
-
-          <View style={styles.prayersGrid}>
-            {prayerResult.all.map((item) => {
-              const isNext = item.isNext;
-              const iconConfig = PRAYER_ICONS[item.key] || { icon: 'sun', color: colors.gold };
-
-              return (
-                <View
-                  key={item.key}
-                  style={[
-                    styles.prayerCard,
-                    {
-                      backgroundColor: isNext ? colors.surfaceSunk : colors.surface,
-                      borderColor: isNext ? colors.gold : colors.border,
-                      borderWidth: isNext ? 1.5 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.cardHeader}>
-                    {isNext ? (
-                      <View style={[styles.activePill, { backgroundColor: colors.gold }]}>
-                        <Text style={styles.activePillText}>القادمة</Text>
-                      </View>
-                    ) : (
-                      <View style={{ width: 1 }} />
-                    )}
-
-                    <View
-                      style={[
-                        styles.iconCircle,
-                        { backgroundColor: isNext ? colors.gold : colors.surfaceSunk },
-                      ]}
-                    >
-                      <Feather
-                        name={iconConfig.icon}
-                        size={17}
-                        color={isNext ? '#1A1713' : iconConfig.color}
-                      />
-                    </View>
-                  </View>
-
-                  <Text
-                    style={[
-                      styles.prayerNameText,
-                      { color: isNext ? colors.gold : colors.textPrimary, fontFamily: fonts.defaultBold },
-                    ]}
-                  >
-                    {item.nameAr}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.prayerTimeText,
-                      { color: isNext ? colors.gold : colors.textPrimary },
-                    ]}
-                  >
-                    {item.timeFormatted}
-                  </Text>
-                </View>
-              );
-            })}
+          <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {prayerResult.all.map((item, index) => (
+              <PrayerTimeRow
+                key={item.key}
+                item={item}
+                icon={PRAYER_ICONS[item.key].icon}
+                iconColor={PRAYER_ICONS[item.key].color}
+                showDivider={index < prayerResult.all.length - 1}
+              />
+            ))}
           </View>
+
         </View>
       </ScrollView>
 
@@ -382,175 +342,131 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: spacing['4xl'],
-  },
-  heroBackdrop: {
-    overflow: 'hidden',
-    paddingBottom: spacing['4xl'],
+  hero: {
+    paddingBottom: spacing['4xl'] + spacing.base,
     paddingHorizontal: spacing.lg,
-    width: '100%',
-  },
-  heroImage: {},
-  scrim: {
-    ...StyleSheet.absoluteFill,
-  },
-  heroInnerContent: {
-    zIndex: 2,
   },
   headerRow: {
     alignItems: 'center',
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
   },
-  headerTitleText: {
+  headerIconBtn: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  headerTitle: {
+    ...heroTextShadow,
+    color: HERO_TEXT,
     fontFamily: fonts.defaultBold,
-    fontSize: 18,
+    fontSize: 17,
   },
-  headerBtn: {
+  heroCenter: {
     alignItems: 'center',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
+    marginTop: spacing.xl,
   },
-  qiblaHeaderBtn: {
-    alignItems: 'center',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    flexDirection: 'row-reverse',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  qiblaHeaderBtnText: {
-    fontFamily: fonts.defaultBold,
-    fontSize: 13,
-  },
-  bottomSelectorRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  selectorChip: {
-    alignItems: 'center',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    flexDirection: 'row-reverse',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  selectorChipText: {
+  heroEyebrow: {
+    ...heroTextShadow,
+    color: HERO_TEXT_MUTED,
     fontFamily: fonts.defaultMedium,
-    fontSize: 12,
-  },
-  heroCountdownSection: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  nextBadge: {
-    borderRadius: radius.full,
-    borderWidth: 1,
-    marginBottom: spacing.xs,
-    paddingHorizontal: 14,
-    paddingVertical: 3,
-  },
-  nextBadgeText: {
-    fontFamily: fonts.defaultBold,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   heroPrayerName: {
+    ...heroTextShadow,
+    color: HERO_TEXT,
     fontFamily: fonts.defaultBold,
-    fontSize: 28,
-    marginBottom: 2,
+    fontSize: 32,
+    lineHeight: 44,
+    marginTop: spacing.xs,
   },
-  heroTimeRemaining: {
+  heroAdhanTime: {
+    ...heroTextShadow,
+    color: HERO_GOLD,
     fontFamily: fonts.defaultBold,
-    fontSize: 34,
-    letterSpacing: 2,
-    marginVertical: 4,
+    fontSize: 48,
+    fontVariant: ['tabular-nums'],
+    lineHeight: 56,
   },
-  heroTargetTime: {
-    fontFamily: fonts.defaultMedium,
-    fontSize: 14,
-    marginTop: 2,
+  heroCountdownPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    flexDirection: 'row-reverse',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
   },
-  prayersSection: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderTopWidth: 1.5,
-    marginTop: -26,
-    overflow: 'hidden',
-    paddingHorizontal: spacing.lg,
+  heroCountdownText: {
+    color: HERO_TEXT,
+    fontFamily: fonts.defaultBold,
+    fontSize: 13,
+    writingDirection: 'rtl',
+  },
+  sheet: {
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
+    marginTop: -spacing['2xl'],
+    paddingHorizontal: spacing.base,
     paddingTop: spacing.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  sectionTitleCol: {
+    alignItems: 'flex-end',
+    flexShrink: 1,
+  },
+  settingsCol: {
+    gap: spacing.sm,
+    width: 132,
+  },
+  settingChip: {
+    alignItems: 'center',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    flexDirection: 'row-reverse',
+    gap: 6,
+    height: 34,
+    paddingHorizontal: spacing.md,
+  },
+  settingChipText: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: fonts.defaultBold,
+    fontSize: 13,
+    writingDirection: 'rtl',
   },
   sectionTitle: {
     fontFamily: fonts.defaultBold,
-    fontSize: 17,
-    marginBottom: spacing.md,
-    textAlign: 'right',
-  },
-  prayersGrid: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.sm + 2,
-  },
-  prayerCard: {
-    width: '48%',
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    marginBottom: spacing.xs,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  iconCircle: {
-    alignItems: 'center',
-    borderRadius: radius.full,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  prayerNameText: {
-    fontSize: 16,
-    textAlign: 'right',
-    marginTop: 2,
-  },
-  prayerTimeText: {
-    fontFamily: fonts.defaultBold,
     fontSize: 20,
     textAlign: 'right',
-    marginTop: 4,
   },
-  activePill: {
-    borderRadius: radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  sectionDate: {
+    fontFamily: fonts.defaultMedium,
+    fontSize: 13,
+    marginTop: 2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
-  activePillText: {
-    color: '#1A1713',
-    fontFamily: fonts.defaultBold,
-    fontSize: 10,
+  listCard: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   modalContainer: {
     flex: 1,

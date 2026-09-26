@@ -426,15 +426,50 @@ export async function getAyahsForPage(page: number, riwaya: 'hafs' | 'warsh' = '
   }));
 }
 
-/** The mushaf page a given ayah sits on — used to restore the reading position. */
+/**
+ * The mushaf page a given ayah sits on — used to restore the reading position.
+ *
+ * Hafs and Warsh number ayahs differently, so an ayah number taken from the
+ * other riwaya may not exist here; fall back to the closest earlier ayah of
+ * the same surah rather than to page 1.
+ */
 export async function getPageForAyah(surah: number, ayah: number, riwaya: 'hafs' | 'warsh' = 'hafs'): Promise<number> {
   const db = await getDatabase();
   const table = riwaya === 'warsh' ? 'ayahs_warsh' : 'ayahs';
   const row = await db.getFirstAsync<{ page: number }>(
-    `SELECT page FROM ${table} WHERE surah = ? AND ayah = ?`,
-    [surah, ayah],
+    `SELECT page FROM ${table} WHERE surah = ? AND ayah <= ? ORDER BY ayah DESC LIMIT 1`,
+    [surah, Math.max(1, ayah)],
   );
   return row?.page ?? 1;
+}
+
+const pageIndexCache = new Map<'hafs' | 'warsh', Promise<Map<number, number[]>>>();
+
+/**
+ * Every ayah's page for one riwaya, as `surah → pages[ayah - 1]`. Lets list
+ * screens show riwaya-correct page numbers synchronously once loaded.
+ */
+export function getPageIndex(riwaya: 'hafs' | 'warsh'): Promise<Map<number, number[]>> {
+  let cached = pageIndexCache.get(riwaya);
+  if (!cached) {
+    cached = (async () => {
+      const db = await getDatabase();
+      const table = riwaya === 'warsh' ? 'ayahs_warsh' : 'ayahs';
+      const rows = await db.getAllAsync<{ surah: number; ayah: number; page: number }>(
+        `SELECT surah, ayah, page FROM ${table} ORDER BY surah, ayah`,
+      );
+      const index = new Map<number, number[]>();
+      for (const row of rows) {
+        const pages = index.get(row.surah) ?? [];
+        pages[row.ayah - 1] = row.page;
+        index.set(row.surah, pages);
+      }
+      return index;
+    })();
+    cached.catch(() => pageIndexCache.delete(riwaya));
+    pageIndexCache.set(riwaya, cached);
+  }
+  return cached;
 }
 
 /** Single ayah lookup by surah and verse number. */
@@ -469,10 +504,11 @@ export async function getAyah(surah: number, ayah: number, riwaya: 'hafs' | 'war
 }
 
 /** The surah a page opens in — drives the reader's top-bar title. */
-export async function getSurahForPage(page: number): Promise<number> {
+export async function getSurahForPage(page: number, riwaya: 'hafs' | 'warsh' = 'hafs'): Promise<number> {
   const db = await getDatabase();
+  const table = riwaya === 'warsh' ? 'ayahs_warsh' : 'ayahs';
   const row = await db.getFirstAsync<{ surah: number }>(
-    'SELECT surah FROM ayahs WHERE page = ? ORDER BY id LIMIT 1',
+    `SELECT surah FROM ${table} WHERE page = ? ORDER BY id LIMIT 1`,
     [page],
   );
   return row?.surah ?? 1;

@@ -1,8 +1,8 @@
 /**
- * Home dashboard card with a photographic background (Moroccan ceiling, zellige…).
+ * Home dashboard card with a photographic background (the mosque carpet).
  *
- * The scrim is a light vertical gradient — just enough for the cream calligraphy
- * to read — so the ornament of the photo stays visible instead of a dark block.
+ * The photo is already dark, so the scrim is a light vertical gradient — just
+ * enough for the cream calligraphy to read — and the carpet pattern stays visible.
  */
 
 import { ImageBackground, type ImageSource } from 'expo-image';
@@ -12,8 +12,22 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius } from '../../theme/tokens';
 
-// Warm brown, never pure black: darker in the middle where the text sits.
-const SCRIM_COLORS = ['rgba(38, 22, 10, 0.28)', 'rgba(38, 22, 10, 0.52)', 'rgba(38, 22, 10, 0.3)'] as const;
+// Warm brown, never pure black: a touch darker in the middle where the text sits.
+const SCRIM_COLORS = ['rgba(38, 22, 10, 0.08)', 'rgba(38, 22, 10, 0.3)', 'rgba(38, 22, 10, 0.1)'] as const;
+
+/** Text colours for content laid over the card photo (cream, never pure white). */
+export const IMAGE_CARD_TEXT = {
+  primary: '#FFF4E2',
+  muted: '#F1E3C4',
+  gold: '#FCE38A',
+} as const;
+
+/** Soft shadow that keeps light text legible over the photo. */
+export const imageCardTextShadow = {
+  textShadowColor: 'rgba(30, 16, 6, 0.55)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+} as const;
 
 interface Props {
   source: ImageSource | number;

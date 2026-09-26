@@ -39,6 +39,7 @@ import { useTheme } from '../src/theme/ThemeProvider';
 import { HIT_SLOP, fonts, radius, spacing } from '../src/theme/tokens';
 import { toArabicDigits } from '../src/utils/arabicDigits';
 import { saveImageToGallery } from '../src/utils/saveToGallery';
+import { surahFontName } from '../src/utils/surahFontName';
 
 type TextPosition = 'top' | 'center' | 'bottom';
 type TextColor = 'gold' | 'white' | 'dark';
@@ -286,7 +287,7 @@ export default function WallpaperEditorScreen() {
                   ]}
                   allowFontScaling={false}
                 >
-                  سورة {selectedVerse.surahNameAr}
+                  سورة {surahFontName(selectedVerse.surahNameAr)}
                 </Text>
                 <Text
                   style={[

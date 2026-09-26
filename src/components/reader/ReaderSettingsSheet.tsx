@@ -31,6 +31,7 @@ import {
   MIN_TOUCH_TARGET,
   arabicTextStyle,
   fonts,
+  palette,
   radius,
   spacing,
   type ThemeName,
@@ -61,9 +62,9 @@ function ReaderSettingsSheetComponent({ visible, onClose, currentPage }: Props) 
   const setWarshFont = useSettings((s) => s.setWarshFont);
 
   const themes: Array<{ key: ThemeName | 'system'; label: string; bg: string; border: string }> = [
-    { key: 'light', label: 'ورقي', bg: '#FFEED6', border: '#827148' },
-    { key: 'dark', label: 'ليلي', bg: '#151310', border: '#A5AF79' },
-    { key: 'sepia', label: 'بني فاتح', bg: '#F7EAD7', border: '#827148' },
+    { key: 'light', label: 'ورقي', bg: palette.light.bg, border: palette.light.accent },
+    { key: 'dark', label: 'ليلي', bg: palette.dark.bg, border: palette.dark.accent },
+    { key: 'sepia', label: 'بني فاتح', bg: palette.sepia.bg, border: palette.sepia.accent },
     { key: 'system', label: 'النظام', bg: colors.surfaceSunk, border: colors.border },
   ];
 

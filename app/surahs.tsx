@@ -19,20 +19,21 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HomeImageCard, IMAGE_CARD_TEXT, imageCardTextShadow } from '../src/components/home/HomeImageCard';
 import { IslamicEmblem } from '../src/components/ui/IslamicEmblem';
 import type { Surah } from '../src/data/database';
 import {
   getAllHizbs,
   getAllJuz,
-  pageForAyah,
   type HizbInfo,
   type JuzInfo,
 } from '../src/data/navigation';
-import { useSurahList } from '../src/features/reader/useQuranData';
-import { useSettings, type Bookmark } from '../src/store/settings';
+import { usePageForAyah, useSurahList } from '../src/features/reader/useQuranData';
+import { useLastRead, useSettings, type Bookmark } from '../src/store/settings';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { HIT_SLOP, MIN_TOUCH_TARGET, fonts, radius, spacing } from '../src/theme/tokens';
 import { toArabicDigits } from '../src/utils/arabicDigits';
+import { surahFontName } from '../src/utils/surahFontName';
 
 type TabType = 'surahs' | 'juz' | 'hizb';
 
@@ -41,10 +42,9 @@ export default function SurahIndexScreen() {
   const insets = useSafeAreaInsets();
   const { data: surahs } = useSurahList();
 
-  const lastRead = useSettings((s) => s.lastRead);
-  const setLastRead = useSettings((s) => s.setLastRead);
-  const bookmarks = useSettings((s) => s.bookmarks);
+  const lastRead = useLastRead();
   const toggleBookmark = useSettings((s) => s.toggleBookmark);
+  const pageForAyah = usePageForAyah();
 
   const [activeTab, setActiveTab] = useState<TabType>('surahs');
   const [filter, setFilter] = useState('');
@@ -70,40 +70,30 @@ export default function SurahIndexScreen() {
     );
   }, [surahs, filter]);
 
+  /*
+   * Browsing the index only NAVIGATES. It must never overwrite the saved
+   * stopping point — that is set explicitly from the reader.
+   */
+  const openPage = useCallback((page: number, surah: number) => {
+    router.push({
+      pathname: '/(tabs)/quran',
+      params: { page: String(page), surah: String(surah), t: String(Date.now()) },
+    });
+  }, []);
+
   const openSurah = useCallback(
-    (surah: number, ayah = 1) => {
-      const targetPage = pageForAyah(surah, ayah);
-      setLastRead({ surah, ayah });
-      router.push({
-        pathname: '/(tabs)/quran',
-        params: { page: String(targetPage), surah: String(surah) },
-      });
-    },
-    [setLastRead],
+    (surah: number, ayah = 1) => openPage(pageForAyah(surah, ayah), surah),
+    [openPage, pageForAyah],
   );
 
   const openJuz = useCallback(
-    (juz: JuzInfo) => {
-      const targetPage = juz.startPage;
-      setLastRead({ surah: juz.startSurah, ayah: juz.startAyah });
-      router.push({
-        pathname: '/(tabs)/quran',
-        params: { page: String(targetPage), surah: String(juz.startSurah) },
-      });
-    },
-    [setLastRead],
+    (juz: JuzInfo) => openPage(pageForAyah(juz.startSurah, juz.startAyah), juz.startSurah),
+    [openPage, pageForAyah],
   );
 
   const openHizb = useCallback(
-    (hizb: HizbInfo) => {
-      const targetPage = hizb.startPage;
-      setLastRead({ surah: hizb.startSurah, ayah: hizb.startAyah });
-      router.push({
-        pathname: '/(tabs)/quran',
-        params: { page: String(targetPage), surah: String(hizb.startSurah) },
-      });
-    },
-    [setLastRead],
+    (hizb: HizbInfo) => openPage(pageForAyah(hizb.startSurah, hizb.startAyah), hizb.startSurah),
+    [openPage, pageForAyah],
   );
 
   // Render Surah Row Item (RTL right-aligned with Thmanyah font)
@@ -136,7 +126,7 @@ export default function SurahIndexScreen() {
         {/* Center-Right in row-reverse: Surah Title and Badges */}
         <View style={styles.cardInfo}>
           <Text style={[styles.surahNameTr, { color: colors.textPrimary }]} numberOfLines={1}>
-            سورة {item.nameAr}
+            سورة {surahFontName(item.nameAr)}
           </Text>
 
           <View style={styles.surahMetaRow}>
@@ -175,7 +165,7 @@ export default function SurahIndexScreen() {
         </View>
       </Pressable>
     ),
-    [colors, openSurah],
+    [colors, openSurah, pageForAyah],
   );
 
   // Render Juz Row Item (RTL right-aligned with Thmanyah font)
@@ -193,7 +183,7 @@ export default function SurahIndexScreen() {
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`الجزء ${item.number}، يبدأ من صفحة ${item.startPage}`}
+          accessibilityLabel={`الجزء ${item.number}، يبدأ من صفحة ${pageForAyah(item.startSurah, item.startAyah)}`}
         >
           <IslamicEmblem
             size={44}
@@ -217,13 +207,13 @@ export default function SurahIndexScreen() {
 
           <View style={[styles.pageBadge, { backgroundColor: colors.surfaceSunk }]}>
             <Text style={[styles.pageBadgeText, { color: colors.gold }]}>
-              ص {toArabicDigits(item.startPage)}
+              ص {toArabicDigits(pageForAyah(item.startSurah, item.startAyah))}
             </Text>
           </View>
         </Pressable>
       );
     },
-    [colors, surahs, openJuz],
+    [colors, surahs, openJuz, pageForAyah],
   );
 
   // Render Hizb Row Item (RTL right-aligned with Thmanyah font)
@@ -241,7 +231,7 @@ export default function SurahIndexScreen() {
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`الحزب ${item.number}، الجزء ${item.juzNumber}، يبدأ من صفحة ${item.startPage}`}
+          accessibilityLabel={`الحزب ${item.number}، الجزء ${item.juzNumber}، يبدأ من صفحة ${pageForAyah(item.startSurah, item.startAyah)}`}
         >
           <IslamicEmblem
             size={44}
@@ -281,24 +271,24 @@ export default function SurahIndexScreen() {
 
           <View style={[styles.pageBadge, { backgroundColor: colors.surfaceSunk }]}>
             <Text style={[styles.pageBadgeText, { color: colors.gold }]}>
-              ص {toArabicDigits(item.startPage)}
+              ص {toArabicDigits(pageForAyah(item.startSurah, item.startAyah))}
             </Text>
           </View>
         </Pressable>
       );
     },
-    [colors, surahs, openHizb],
+    [colors, surahs, openHizb, pageForAyah],
   );
 
   // Render Bookmarks Row Item (RTL right-aligned with Thmanyah font)
   const renderBookmarkItem = useCallback(
     ({ item }: { item: Bookmark }) => {
       const bSurah = surahs.find((s) => s.number === item.surah);
-      const bPage = pageForAyah(item.surah, item.ayah);
+      const bPage = item.page;
 
       return (
         <Pressable
-          onPress={() => openSurah(item.surah, item.ayah)}
+          onPress={() => openPage(item.page, item.surah)}
           style={({ pressed }) => [
             styles.cardRow,
             {
@@ -341,7 +331,7 @@ export default function SurahIndexScreen() {
         </Pressable>
       );
     },
-    [colors, surahs, openSurah, toggleBookmark],
+    [colors, surahs, openPage, toggleBookmark],
   );
 
   return (
@@ -365,50 +355,37 @@ export default function SurahIndexScreen() {
         <View style={styles.circleButtonPlaceholder} />
       </View>
 
-      {/* Hero "Last Read" Card (RTL) */}
+      {/* Hero "Last Read" Card (RTL) — same photo card as the home page */}
       {lastReadSurah && (
-        <View style={styles.heroWrapper}>
-          <Pressable
-            onPress={() => openSurah(lastReadSurah.number, lastRead?.ayah ?? 1)}
-            style={({ pressed }) => [
-              styles.heroCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.gold,
-                opacity: pressed ? 0.88 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`متابعة قراءة سورة ${lastReadSurah.nameAr}`}
-          >
-            {/* Right side in row-reverse: Surah details */}
-            <View style={styles.heroContent}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.terracottaSoft }]}>
-                <Text style={[styles.heroBadgeText, { color: colors.terracotta }]}>
-                  آخر قراءة
+        <Pressable
+          onPress={() => lastRead && openPage(lastRead.page, lastRead.surah)}
+          style={({ pressed }) => [styles.heroWrapper, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+          accessibilityRole="button"
+          accessibilityLabel={`متابعة قراءة سورة ${lastReadSurah.nameAr}`}
+        >
+          <HomeImageCard source={require('../assets/images/mosque.jpg')}>
+            <View style={styles.heroCard}>
+              {/* Right side in row-reverse: Surah details */}
+              <View style={styles.heroContent}>
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>آخر قراءة</Text>
+                </View>
+
+                <Text style={styles.heroArabicName}>سورة {lastReadSurah.nameAr}</Text>
+
+                <Text style={styles.heroSurahMeta}>
+                  {`الآية ${toArabicDigits(lastRead?.ayah ?? 1)} · ص ${toArabicDigits(lastRead?.page ?? 1)} · ${lastReadSurah.revelation === 'Meccan' ? 'مكية' : 'مدنية'}`}
                 </Text>
               </View>
 
-              <Text style={[styles.heroArabicName, { color: colors.textPrimary }]}>
-                سورة {lastReadSurah.nameAr}
-              </Text>
-
-              <Text style={[styles.heroSurahMeta, { color: colors.textSecond }]}>
-                {`الآية ${toArabicDigits(lastRead?.ayah ?? 1)} · ${lastReadSurah.revelation === 'Meccan' ? 'مكية' : 'مدنية'}`}
-              </Text>
-            </View>
-
-            {/* Left side in row-reverse: Action button */}
-            <View style={styles.heroLeft}>
-              <View style={[styles.heroResumePill, { backgroundColor: colors.surfaceSunk, borderColor: colors.goldSoft }]}>
-                <Text style={[styles.heroResumeText, { color: colors.accent }]}>
-                  متابعة
-                </Text>
-                <Feather name="chevron-left" size={14} color={colors.accent} />
+              {/* Left side in row-reverse: Action button */}
+              <View style={styles.heroResumePill}>
+                <Text style={styles.heroResumeText}>متابعة</Text>
+                <Feather name="chevron-left" size={14} color={IMAGE_CARD_TEXT.primary} />
               </View>
             </View>
-          </Pressable>
-        </View>
+          </HomeImageCard>
+        </Pressable>
       )}
 
       {/* Tab Selector Bar (RTL right-to-left order with 3 Tabs: Surahs, Juz, Hizb) */}
@@ -582,59 +559,63 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   heroCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     padding: spacing.base,
   },
   heroContent: {
-    flex: 1,
     alignItems: 'flex-end',
+    flex: 1,
     marginLeft: spacing.md,
   },
   heroBadge: {
-    borderRadius: radius.sm,
-    marginBottom: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
     alignSelf: 'flex-end',
+    backgroundColor: 'rgba(255, 244, 226, 0.16)',
+    borderColor: 'rgba(255, 244, 226, 0.35)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
   },
   heroBadgeText: {
+    color: IMAGE_CARD_TEXT.muted,
     fontFamily: fonts.defaultBold,
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 0.3,
   },
   heroArabicName: {
+    ...imageCardTextShadow,
+    color: IMAGE_CARD_TEXT.primary,
     fontFamily: fonts.surahName,
-    fontSize: 24,
-    lineHeight: 30,
-    marginTop: 2,
+    fontSize: 30,
+    lineHeight: 38,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   heroSurahMeta: {
-    fontFamily: fonts.default,
+    ...imageCardTextShadow,
+    color: IMAGE_CARD_TEXT.gold,
+    fontFamily: fonts.defaultMedium,
     fontSize: 14,
-    marginTop: 3,
+    marginTop: 2,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  heroLeft: {
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
   heroResumePill: {
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 244, 226, 0.16)',
+    borderColor: 'rgba(255, 244, 226, 0.4)',
     borderRadius: radius.full,
     borderWidth: 1,
     flexDirection: 'row-reverse',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   heroResumeText: {
+    color: IMAGE_CARD_TEXT.primary,
     fontFamily: fonts.defaultBold,
     fontSize: 13,
   },

@@ -21,6 +21,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { ARABIC_FONT_SIZE, fonts, radius } from '../../theme/tokens';
 import { toArabicDigits } from '../../utils/arabicDigits';
 import { MushafFrame } from './MushafFrame';
+import { surahFontName } from '../../utils/surahFontName';
 
 interface Props {
   page: number;
@@ -36,10 +37,17 @@ interface Props {
   warshLayout: WarshPageLayout | null;
   rawAyahs: PageAyah[];
   basmalahText: string;
-  onSelectAyah: (position: { surah: number; ayah: number }) => void;
+  onSelectAyah: (position: { surah: number; ayah: number; page: number }) => void;
   onToggleHeader: () => void;
   isBookmarked?: boolean;
+  /** Ayah the reader just tapped on this page (null when it is on another page). */
+  selectedAyah?: { surah: number; ayah: number } | null;
+  /** Saved stopping point, when it falls on this page. */
+  savedAyah?: { surah: number; ayah: number } | null;
 }
+
+const isAyah = (pos: { surah: number; ayah: number } | null | undefined, surah: number, ayah: number) =>
+  pos != null && pos.surah === surah && pos.ayah === ayah;
 
 const MIN_SIZE_SCALE = 0.8;
 const MAX_SIZE_SCALE = 1.25;
@@ -58,8 +66,17 @@ function MushafPageComponent({
   onSelectAyah,
   onToggleHeader,
   isBookmarked = false,
+  selectedAyah = null,
+  savedAyah = null,
 }: Props) {
   const { colors } = useTheme();
+
+  const highlightFor = (surah: number, ayah: number) =>
+    isAyah(selectedAyah, surah, ayah)
+      ? colors.accentSoft
+      : isAyah(savedAyah, surah, ayah)
+        ? colors.goldSoft
+        : undefined;
 
   const userFontSize = useSettings((s) => s.arabicFontSize);
   const warshFont = useSettings((s) => s.warshFont);
@@ -189,10 +206,11 @@ function MushafPageComponent({
                       return (
                         <Text
                           key={item.id}
-                          onPress={() => onSelectAyah({ surah: item.surahNumber, ayah: item.ayahNumber })}
+                          onPress={() => onSelectAyah({ surah: item.surahNumber, ayah: item.ayahNumber, page })}
                           style={[
                             styles.wordText,
                             {
+                              backgroundColor: highlightFor(item.surahNumber, item.ayahNumber),
                               fontFamily: warshFont === 'almaghribi' ? fonts.quranWarshAlmaghribi : fonts.quranWarsh,
                               fontSize: isHizbMark
                                 ? Math.round(uniformPageFontSize * 1.1)
@@ -323,10 +341,11 @@ function MushafPageComponent({
                     {line.words.map((word) => (
                       <Text
                         key={word.id}
-                        onPress={() => onSelectAyah({ surah: word.surahNumber, ayah: word.ayahNumber })}
+                        onPress={() => onSelectAyah({ surah: word.surahNumber, ayah: word.ayahNumber, page })}
                         style={[
                           styles.wordText,
                           {
+                            backgroundColor: highlightFor(word.surahNumber, word.ayahNumber),
                             fontFamily: qcfFontFamily,
                             fontSize: uniformPageFontSize,
                             color: word.charTypeName === 'end' ? colors.gold : colors.textPrimary,
@@ -409,7 +428,7 @@ function SurahBanner({
           allowFontScaling={false}
           accessibilityLanguage="ar"
         >
-          سورة {nameAr}
+          سورة {surahFontName(nameAr)}
         </Text>
         <View style={styles.bannerMetaSide}>
           <Text style={[styles.bannerMetaText, { color: gold }]}>

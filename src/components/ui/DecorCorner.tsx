@@ -9,7 +9,7 @@ interface Props {
   color?: string;
 }
 
-export function DecorCorner({ width = 100, height = 50, color = "#8d6443" }: Props) {
+export function DecorCorner({ width = 100, height = 50, color = "#8F2D23" }: Props) {
   const xml = color === "#8d6443" ? SVG_RAW : SVG_RAW.replace(/fill:#8d6443/g, "fill:" + color);
   return <SvgXml xml={xml} width={width} height={height} />;
 }

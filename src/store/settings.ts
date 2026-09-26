@@ -14,21 +14,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { pageForAyah } from '../data/navigation';
 import { ARABIC_FONT_SIZE, type ThemeName } from '../theme/tokens';
-
-export interface LastRead {
-  surah: number;
-  ayah: number;
-}
-
-export interface Bookmark extends LastRead {
-  /** Epoch ms — used for "recently saved" ordering. */
-  savedAt: number;
-}
 
 /**
  * Riwaya (Recitation tradition) supported by the reader.
@@ -38,6 +29,26 @@ export interface Bookmark extends LastRead {
 export type Riwaya = 'hafs' | 'warsh';
 export type WarshFont = 'uthmani' | 'almaghribi';
 
+/** An ayah as numbered in ONE riwaya, plus the page it sits on in that mushaf. */
+export interface AyahPosition {
+  surah: number;
+  ayah: number;
+  page: number;
+}
+
+/**
+ * A saved reading position. Hafs and Warsh number ayahs differently (6236 vs
+ * 6214) and paginate differently, so a position is only meaningful together
+ * with the riwaya it was saved in.
+ */
+export interface LastRead extends AyahPosition {
+  riwaya: Riwaya;
+  /** Epoch ms. */
+  savedAt: number;
+}
+
+export type Bookmark = LastRead;
+
 interface SettingsState {
   /** `system` follows the OS; the others pin a specific theme. */
   themePreference: ThemeName | 'system';
@@ -45,7 +56,8 @@ interface SettingsState {
   showTranslation: boolean;
   riwaya: Riwaya;
   warshFont: WarshFont;
-  lastRead: LastRead | null;
+  /** Where the reader stopped, kept separately for each riwaya. */
+  lastReadByRiwaya: Record<Riwaya, LastRead | null>;
   bookmarks: Bookmark[];
 
   setThemePreference: (theme: ThemeName | 'system') => void;
@@ -53,25 +65,44 @@ interface SettingsState {
   toggleTranslation: () => void;
   setRiwaya: (riwaya: Riwaya) => void;
   setWarshFont: (warshFont: WarshFont) => void;
-  setLastRead: (position: LastRead) => void;
-  toggleBookmark: (position: LastRead) => void;
-  isBookmarked: (position: LastRead) => boolean;
+  /** Saves the stopping point for the CURRENT riwaya. */
+  setLastRead: (position: AyahPosition) => void;
+  clearLastRead: () => void;
+  /** Toggles a bookmark in the current riwaya (or `position.riwaya` for an existing bookmark). */
+  toggleBookmark: (position: AyahPosition & { riwaya?: Riwaya }) => void;
 }
 
 const clampFontSize = (size: number) =>
   Math.min(ARABIC_FONT_SIZE.max, Math.max(ARABIC_FONT_SIZE.min, size));
 
-const samePosition = (a: LastRead, b: LastRead) => a.surah === b.surah && a.ayah === b.ayah;
+const samePosition = (a: Bookmark, b: { surah: number; ayah: number; riwaya: Riwaya }) =>
+  a.riwaya === b.riwaya && a.surah === b.surah && a.ayah === b.ayah;
+
+/** Old (v3) positions were `{ surah, ayah }` with no riwaya or page. */
+function migratePosition(value: unknown, riwaya: Riwaya): LastRead | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { surah, ayah, savedAt } = value as { surah?: unknown; ayah?: unknown; savedAt?: unknown };
+  if (typeof surah !== 'number' || typeof ayah !== 'number') return null;
+  let page = 1;
+  try {
+    // Hafs pagination; for an old Warsh position this is a close approximation
+    // (both mushafs have 604 pages) and is corrected on the next save.
+    page = pageForAyah(surah, ayah);
+  } catch {
+    // Ayah number exists only in Warsh numbering — keep page 1 as a fallback.
+  }
+  return { surah, ayah, page, riwaya, savedAt: typeof savedAt === 'number' ? savedAt : 0 };
+}
 
 export const useSettings = create<SettingsState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       themePreference: 'system',
       arabicFontSize: ARABIC_FONT_SIZE.default,
       showTranslation: false,
       riwaya: 'hafs',
       warshFont: 'uthmani',
-      lastRead: null,
+      lastReadByRiwaya: { hafs: null, warsh: null },
       bookmarks: [],
 
       setThemePreference: (themePreference) => set({ themePreference }),
@@ -83,33 +114,65 @@ export const useSettings = create<SettingsState>()(
       setRiwaya: (riwaya) => set({ riwaya }),
       setWarshFont: (warshFont) => set({ warshFont }),
 
-      setLastRead: (lastRead) => {
-        set({ lastRead });
-      },
+      setLastRead: ({ surah, ayah, page }) =>
+        set((state) => ({
+          lastReadByRiwaya: {
+            ...state.lastReadByRiwaya,
+            [state.riwaya]: { surah, ayah, page, riwaya: state.riwaya, savedAt: Date.now() },
+          },
+        })),
 
-      toggleBookmark: (position) =>
+      clearLastRead: () =>
+        set((state) => ({
+          lastReadByRiwaya: { ...state.lastReadByRiwaya, [state.riwaya]: null },
+        })),
+
+      toggleBookmark: ({ surah, ayah, page, riwaya }) =>
         set((state) => {
-          const existing = state.bookmarks.find((b) => samePosition(b, position));
+          const key = { surah, ayah, riwaya: riwaya ?? state.riwaya };
+          const existing = state.bookmarks.some((b) => samePosition(b, key));
           return {
             bookmarks: existing
-              ? state.bookmarks.filter((b) => !samePosition(b, position))
-              : [{ ...position, savedAt: Date.now() }, ...state.bookmarks],
+              ? state.bookmarks.filter((b) => !samePosition(b, key))
+              : [{ ...key, page, savedAt: Date.now() }, ...state.bookmarks],
           };
         }),
-
-      isBookmarked: (position) => get().bookmarks.some((b) => samePosition(b, position)),
     }),
     {
       name: 'quran-settings',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
-      migrate: (persisted) => ({
-        ...(persisted as object),
-        arabicFontSize: ARABIC_FONT_SIZE.default,
-      }),
+      version: 4,
+      migrate: (persisted, version) => {
+        const state = { ...(persisted as Record<string, unknown>) };
+        if (version < 3) state.arabicFontSize = ARABIC_FONT_SIZE.default;
+        if (version < 4) {
+          // v3 kept one riwaya-less position shared by Hafs and Warsh. Attach it
+          // to the riwaya that was active, since that is the numbering it used.
+          const riwaya: Riwaya = state.riwaya === 'warsh' ? 'warsh' : 'hafs';
+          const lastRead = migratePosition(state.lastRead, riwaya);
+          state.lastReadByRiwaya = { hafs: null, warsh: null, [riwaya]: lastRead };
+          delete state.lastRead;
+          state.bookmarks = Array.isArray(state.bookmarks)
+            ? state.bookmarks.map((b) => migratePosition(b, riwaya)).filter((b) => b !== null)
+            : [];
+        }
+        return state as unknown as SettingsState;
+      },
     },
   ),
 );
+
+/** The saved stopping point for the riwaya currently being read. */
+export function useLastRead(): LastRead | null {
+  return useSettings((s) => s.lastReadByRiwaya[s.riwaya]);
+}
+
+/** Bookmarks of the current riwaya only, newest first. */
+export function useRiwayaBookmarks(): Bookmark[] {
+  const riwaya = useSettings((s) => s.riwaya);
+  const bookmarks = useSettings((s) => s.bookmarks);
+  return useMemo(() => bookmarks.filter((b) => b.riwaya === riwaya), [bookmarks, riwaya]);
+}
 
 /**
  * True once the persisted state has been read back from storage.

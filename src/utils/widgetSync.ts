@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { getAyahRange } from '../data/database';
 import { toArabicDigits } from './arabicDigits';
-import { getHijriToday } from './hijriDate';
+import { WEEKDAYS_AR, getHijriToday } from './hijriDate';
 
 export interface NextPrayerWidgetPayload {
   nextPrayerKey: string;
@@ -34,15 +34,6 @@ export interface NextPrayerWidgetPayload {
   updatedAt: string;
 }
 
-const WEEKDAYS_AR = [
-  'الأحد',
-  'الإثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
-  'السبت',
-] as const;
 
 export interface HijriWidgetPayload {
   day: number;
@@ -182,7 +173,7 @@ export async function syncHijriWidgetData(): Promise<HijriWidgetPayload> {
   const payload: HijriWidgetPayload = {
     day: hijri.dayOfMonth,
     dayArabic: toArabicDigits(hijri.dayOfMonth),
-    weekdayName: WEEKDAYS_AR[Number(hijri.weekdayLigature) - 1] || 'اليوم',
+    weekdayName: WEEKDAYS_AR[hijri.weekday] || 'اليوم',
     weekdayLigature: hijri.weekdayLigature,
     monthNameAr: hijri.monthNameAr,
     monthLigature: hijri.monthLigature,

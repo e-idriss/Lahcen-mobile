@@ -24,6 +24,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { HIT_SLOP, fonts, radius, spacing } from '../../theme/tokens';
 import { toArabicDigits } from '../../utils/arabicDigits';
 import { IslamicEmblem } from '../ui/IslamicEmblem';
+import { surahFontName } from '../../utils/surahFontName';
 
 function formatTime(millis: number): string {
   if (!millis || isNaN(millis) || millis < 0) return '00:00';
@@ -163,7 +164,7 @@ export function FullScreenPlayerModal() {
 
             {/* Surah Title in Calligraphy */}
             <Text style={[styles.surahTitle, { color: colors.textPrimary }]} allowFontScaling={false}>
-              سورة {currentTrack.surahNameAr}
+              سورة {surahFontName(currentTrack.surahNameAr)}
             </Text>
 
             {/* Reciter & Moshaf Meta */}

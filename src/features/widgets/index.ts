@@ -12,7 +12,7 @@ import {
   requestWidgetUpdate,
 } from 'react-native-android-widget';
 
-import { getPageForAyah, getSurah } from '../../data/database';
+import { getSurah } from '../../data/database';
 import { usePrayerStore } from '../prayer/prayerStore';
 import { useSettings } from '../../store/settings';
 import { pushIOSWidgetData } from './iosWidgetBridge';
@@ -39,15 +39,15 @@ export async function syncWidgets(): Promise<void> {
   if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
 
   const prayer = usePrayerStore.getState();
-  const { lastRead } = useSettings.getState();
+  const { lastReadByRiwaya, riwaya } = useSettings.getState();
+  const lastRead = lastReadByRiwaya[riwaya];
 
   let lastReadInfo: { surahNameAr: string; ayah: number; page: number } | null = null;
   if (lastRead) {
     try {
       const surah = await getSurah(lastRead.surah);
-      const page = await getPageForAyah(lastRead.surah, lastRead.ayah);
       if (surah) {
-        lastReadInfo = { surahNameAr: surah.nameAr, ayah: lastRead.ayah, page };
+        lastReadInfo = { surahNameAr: surah.nameAr, ayah: lastRead.ayah, page: lastRead.page };
       }
     } catch {
       // leave null — the widget shows its "open the app" prompt
@@ -99,7 +99,7 @@ export function startWidgetSync(): void {
   if ((Platform.OS !== 'android' && Platform.OS !== 'ios') || syncSubscribed) return;
   syncSubscribed = true;
   useSettings.subscribe((s, prev) => {
-    if (s.lastRead !== prev.lastRead) scheduleSync();
+    if (s.lastReadByRiwaya !== prev.lastReadByRiwaya || s.riwaya !== prev.riwaya) scheduleSync();
   });
   usePrayerStore.subscribe((s, prev) => {
     if (

@@ -11,6 +11,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { SURAH_NAME_LINE_HEIGHT_RATIO, fonts, radius, rtlText, spacing } from '../../theme/tokens';
 import { toArabicDigits } from '../../utils/arabicDigits';
+import { surahFontName } from '../../utils/surahFontName';
 
 interface Props {
   nameAr: string;
@@ -49,7 +50,7 @@ function SurahHeaderComponent({ nameAr, revelation, ayahCount }: Props) {
             accessibilityLanguage="ar"
             allowFontScaling={false}
           >
-            {nameAr}
+            {surahFontName(nameAr)}
           </Text>
 
           <Ornament color={colors.gold} flip />

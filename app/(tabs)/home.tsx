@@ -5,49 +5,56 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { Image, ImageBackground } from 'expo-image';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HijriDateCard } from '../../src/components/home/HijriDateCard';
+import { HomeImageCard } from '../../src/components/home/HomeImageCard';
 import { NextPrayerHero } from '../../src/components/home/NextPrayerHero';
+import { QuickLinkTile } from '../../src/components/home/QuickLinkTile';
 import { IslamicEmblem } from '../../src/components/ui/IslamicEmblem';
 import { getPrayerTimes } from '../../src/features/prayer/prayerService';
 import { usePrayerStore } from '../../src/features/prayer/prayerStore';
 import { useMinuteTick } from '../../src/features/prayer/useMinuteTick';
 import { useSurahList } from '../../src/features/reader/useQuranData';
-import { useSettings } from '../../src/store/settings';
+import { useLastRead } from '../../src/store/settings';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { fonts, radius, rtlText, spacing } from '../../src/theme/tokens';
+import { toArabicDigits } from '../../src/utils/arabicDigits';
 import { getHijriToday } from '../../src/utils/hijriDate';
+import { surahFontName } from '../../src/utils/surahFontName';
+import { getPrayerCalligraphyKey } from '../../src/features/prayer/prayerCalligraphy';
 
 const HIJRI_YEAR_SUFFIX = 'هـ';
 
-function getPrayerCalligraphyKey(key?: string): string | null {
-  switch (key) {
-    case 'fajr':
-      return '3';
-    case 'dhuhr':
-      return '4';
-    case 'asr':
-      return '5';
-    case 'maghrib':
-      return '6';
-    case 'isha':
-      return '7';
-    default:
-      return null;
-  }
+// Light cream calligraphy on the photo cards; the soft shadow keeps it legible
+// now that the scrim is lighter.
+const CARD_TEXT = '#FFF4E2';
+const CARD_TEXT_GOLD = '#FCE38A';
+const CARD_TEXT_MUTED = '#F1E3C4';
+const cardTextShadow = {
+  textShadowColor: 'rgba(30, 16, 6, 0.55)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+} as const;
+
+interface QuickLink {
+  key: string;
+  label: string;
+  accessibilityLabel: string;
+  chipColor: string;
+  icon: ReactNode;
+  onPress: () => void;
 }
+
 
 export default function HomeScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { data: surahs } = useSurahList();
 
-  const lastRead = useSettings((s) => s.lastRead);
+  const lastRead = useLastRead();
 
   const lastReadSurah = useMemo(() => {
     if (!lastRead) return null;
@@ -75,6 +82,94 @@ export default function HomeScreen() {
 
   const today = useMemo(() => getHijriToday(), []);
 
+  const quickLinkRows = useMemo<QuickLink[][]>(() => {
+    const links: QuickLink[] = [
+      {
+        key: 'mushaf',
+        label: 'المصحف',
+        accessibilityLabel: 'افتح المصحف',
+        chipColor: 'rgba(46, 125, 50, 0.12)',
+        icon: <IslamicEmblem size={20} color="#2E7D32" fillColor="rgba(46, 125, 50, 0.2)" />,
+        onPress: () => router.push('/(tabs)/quran'),
+      },
+      {
+        key: 'surahs',
+        label: 'السور',
+        accessibilityLabel: 'فهرس السور',
+        chipColor: 'rgba(214, 180, 111, 0.18)',
+        icon: <IslamicEmblem size={20} color={colors.gold} fillColor="rgba(214, 180, 111, 0.3)" />,
+        onPress: () => router.push('/surahs'),
+      },
+      {
+        key: 'prayer',
+        label: 'الصلاة',
+        accessibilityLabel: 'مواقيت الصلاة',
+        chipColor: 'rgba(230, 140, 40, 0.14)',
+        icon: <Feather name="clock" size={18} color="#E68A00" />,
+        onPress: () => router.push('/prayer-times'),
+      },
+      {
+        key: 'qibla',
+        label: 'القبلة',
+        accessibilityLabel: 'اتجاه القبلة',
+        chipColor: 'rgba(0, 137, 123, 0.12)',
+        icon: <Feather name="compass" size={18} color="#00897B" />,
+        onPress: () => router.push('/qibla'),
+      },
+      {
+        key: 'audio',
+        label: 'التلاوات',
+        accessibilityLabel: 'التلاوات القرآنية',
+        chipColor: 'rgba(103, 58, 183, 0.12)',
+        icon: <Feather name="headphones" size={18} color="#673AB7" />,
+        onPress: () => router.push('/audio'),
+      },
+      {
+        key: 'azkar',
+        label: 'الأذكار',
+        accessibilityLabel: 'الأذكار والأدعية',
+        chipColor: 'rgba(216, 67, 21, 0.12)',
+        icon: <Feather name="book-open" size={18} color="#D84315" />,
+        onPress: () => router.push('/azkar'),
+      },
+      {
+        key: 'wallpapers',
+        label: 'الخلفيات',
+        accessibilityLabel: 'خلفيات الشاشة',
+        chipColor: 'rgba(230, 110, 80, 0.14)',
+        icon: <Feather name="image" size={18} color={colors.terracotta} />,
+        onPress: () => router.push('/wallpapers'),
+      },
+      {
+        key: 'widgets',
+        label: 'الودجات',
+        accessibilityLabel: 'ودجات الشاشة الرئيسية',
+        chipColor: 'rgba(63, 110, 160, 0.13)',
+        icon: <Feather name="grid" size={18} color="#3F6EA0" />,
+        onPress: () => router.push('/widgets'),
+      },
+      {
+        key: 'search',
+        label: 'البحث',
+        accessibilityLabel: 'البحث في القرآن',
+        chipColor: 'rgba(180, 140, 60, 0.14)',
+        icon: <Feather name="search" size={18} color={colors.gold} />,
+        onPress: () => router.push('/search'),
+      },
+      {
+        key: 'qasidas',
+        label: 'المدائح النبوية',
+        accessibilityLabel: 'قصائد المدائح النبوية',
+        chipColor: 'rgba(130, 113, 72, 0.14)',
+        icon: <Feather name="feather" size={18} color={colors.gold} />,
+        onPress: () => router.push('/qasidas'),
+      },
+    ];
+    const rows: QuickLink[][] = [];
+    for (let i = 0; i < links.length; i += 2) rows.push(links.slice(i, i + 2));
+    return rows;
+  }, [colors.gold, colors.terracotta]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView
@@ -100,324 +195,75 @@ export default function HomeScreen() {
             },
           ]}
         >
-          {/* Hijri Date Banner (In Body Sheet, Centered & Big Calligraphy) */}
-          <View style={styles.hijriCardWrapper}>
-            <ImageBackground
-              source={require('../../assets/images/mosque.jpg')}
-              style={styles.cardImageBg}
-              imageStyle={styles.cardImageInner}
-            >
-              {/* Scrim Overlay for clear text contrast */}
-              <View style={styles.cardScrim} />
+          {/* Hijri date */}
+          <HomeImageCard source={require('../../assets/images/mosque.jpg')} style={styles.cardSpacing}>
+            <View style={styles.cardInner}>
+              <Text style={styles.cardPreTitle}>التاريخ الهجري</Text>
 
-              <View style={styles.hijriCardInner}>
-                <Text style={styles.hijriPreTitle}>التاريخ الهجري</Text>
+              {/* Calligraphic weekday name */}
+              <Text style={styles.hijriWeekdayCalligraphy} allowFontScaling={false} accessibilityElementsHidden>
+                {String(today.weekdayLigature)}
+              </Text>
 
-                {/* Calligraphic Weekday Name */}
-                <Text
-                  style={[styles.hijriWeekdayCalligraphy, { color: '#FFEED6' }]}
-                  allowFontScaling={false}
-                  accessibilityElementsHidden
-                >
-                  {String(today.weekdayLigature)}
+              {/* Day number + month calligraphy + year */}
+              <View style={styles.hijriDateRow}>
+                <Text style={styles.hijriDayNumber} allowFontScaling={false}>
+                  {today.dayOfMonth}
                 </Text>
-
-                {/* Date Row: Day Number + Month Calligraphy + Year */}
-                <View style={styles.hijriDateRow}>
-                  <Text style={[styles.hijriDayNumber, { color: '#FCE38A' }]} allowFontScaling={false}>
-                    {today.dayOfMonth}
-                  </Text>
-
-                  <View style={styles.hijriMonthClip}>
-                    <Text
-                      style={[styles.hijriMonthCalligraphy, { color: '#FFEED6' }]}
-                      allowFontScaling={false}
-                      accessibilityElementsHidden
-                    >
-                      {String(today.monthLigature)}
-                    </Text>
-                  </View>
-
-                  <Text style={[styles.hijriYearText, { color: '#DECFA9' }]}>
-                    {`${today.year} ${HIJRI_YEAR_SUFFIX}`}
+                <View style={styles.hijriMonthClip}>
+                  <Text style={styles.hijriMonthCalligraphy} allowFontScaling={false} accessibilityElementsHidden>
+                    {String(today.monthLigature)}
                   </Text>
                 </View>
+                <Text style={styles.hijriYearText}>{`${today.year} ${HIJRI_YEAR_SUFFIX}`}</Text>
               </View>
-            </ImageBackground>
-          </View>
+            </View>
+          </HomeImageCard>
 
-          {/* Resume Reading Card (Directly Below Next Prayer, Centered & Big Calligraphy) */}
+          {/* Resume reading */}
           <Pressable
-            onPress={() => router.push('/(tabs)/quran')}
-            style={({ pressed }) => [
-              styles.resumeWrapper,
-              { opacity: pressed ? 0.88 : 1 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={
-              lastReadSurah
-                ? `متابعة القراءة، سورة ${lastReadSurah.nameAr}`
-                : 'بدء القراءة'
+            onPress={() =>
+              router.push(
+                lastRead
+                  ? { pathname: '/(tabs)/quran', params: { page: String(lastRead.page), t: String(Date.now()) } }
+                  : '/(tabs)/quran',
+              )
             }
+            style={({ pressed }) => [styles.cardSpacing, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={lastReadSurah ? `متابعة القراءة، سورة ${lastReadSurah.nameAr}` : 'بدء القراءة'}
           >
-            <ImageBackground
-              source={require('../../assets/images/mosque.jpg')}
-              style={styles.cardImageBg}
-              imageStyle={styles.cardImageInner}
-            >
-              {/* Scrim Overlay for clear text contrast */}
-              <View style={styles.cardScrim} />
-
-              <View style={styles.resumeCardInner}>
-                <Text style={styles.resumePreTitle}>
-                  {lastReadSurah ? 'متابعة الورد القرآني' : 'بدء التلاوة'}
+            <HomeImageCard source={require('../../assets/images/mosque.jpg')}>
+              <View style={styles.cardInner}>
+                <Text style={styles.cardPreTitle}>{lastReadSurah ? 'متابعة الورد القرآني' : 'بدء التلاوة'}</Text>
+                <Text style={styles.resumeArabicName}>
+                  {lastReadSurah ? `سورة ${surahFontName(lastReadSurah.nameAr)}` : 'سورة الفاتحة'}
                 </Text>
-
-                {/* Big Centered Surah Name */}
-                <Text style={[styles.resumeArabicName, { color: '#FFEED6' }]}>
-                  {lastReadSurah ? `سورة ${lastReadSurah.nameAr}` : 'سورة الفاتحة'}
-                </Text>
-
-                {/* Centered Ayah Indicator */}
-                <Text style={[styles.resumeSurahMeta, rtlText, { color: '#FCE38A' }]}>
-                  {lastReadSurah ? `الآية ${lastRead?.ayah ?? 1}` : 'افتح المصحف'}
+                <Text style={[styles.resumeSurahMeta, rtlText]}>
+                  {lastReadSurah && lastRead
+                    ? `الآية ${toArabicDigits(lastRead.ayah)} · ص ${toArabicDigits(lastRead.page)}`
+                    : 'افتح المصحف'}
                 </Text>
               </View>
-            </ImageBackground>
+            </HomeImageCard>
           </Pressable>
 
-          {/* Quick Links Grid: Modern Premium Elevated Tiles */}
+          {/* Quick links, two per row */}
           <View style={styles.grid}>
-            {/* Row 1: Mushaf & Surahs */}
-            <View style={styles.gridRow}>
-              <Pressable
-                onPress={() => router.push('/(tabs)/quran')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="افتح المصحف"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(46, 125, 50, 0.12)' }]}>
-                    <IslamicEmblem size={20} color="#2E7D32" fillColor="rgba(46, 125, 50, 0.2)" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>المصحف</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/surahs')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="فهرس السور"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(214, 180, 111, 0.18)' }]}>
-                    <IslamicEmblem size={20} color={colors.gold} fillColor="rgba(214, 180, 111, 0.3)" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>السور</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {/* Row 2: Prayer Times & Qibla */}
-            <View style={styles.gridRow}>
-              <Pressable
-                onPress={() => router.push('/prayer-times')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="مواقيت الصلاة"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(230, 140, 40, 0.14)' }]}>
-                    <Feather name="clock" size={18} color="#E68A00" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>الصلاة</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/qibla')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="اتجاه القبلة"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(0, 137, 123, 0.12)' }]}>
-                    <Feather name="compass" size={18} color="#00897B" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>القبلة</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {/* Row 3: Recitations & Azkar */}
-            <View style={styles.gridRow}>
-              <Pressable
-                onPress={() => router.push('/audio')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="التلاوات القرآنية"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(103, 58, 183, 0.12)' }]}>
-                    <Feather name="headphones" size={18} color="#673AB7" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>التلاوات</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/azkar')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="الأذكار والأدعية"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(216, 67, 21, 0.12)' }]}>
-                    <Feather name="book-open" size={18} color="#D84315" />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>الأذكار</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {/* Row 4: Wallpapers & Search */}
-            <View style={styles.gridRow}>
-              <Pressable
-                onPress={() => router.push('/wallpapers')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="خلفيات إسلامية"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(230, 110, 80, 0.14)' }]}>
-                    <Feather name="image" size={18} color={colors.terracotta} />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>الخلفيات</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push('/search')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="البحث في القرآن"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(180, 140, 60, 0.14)' }]}>
-                    <Feather name="search" size={18} color={colors.gold} />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>البحث</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {/* Row 5: Prophetic praise poems */}
-            <View style={styles.gridRow}>
-              <Pressable
-                onPress={() => router.push('/qasidas')}
-                style={({ pressed }) => [
-                  styles.modernTile,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.goldSoft,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="قصائد المدائح النبوية"
-              >
-                <View style={styles.tileContent}>
-                  <View style={[styles.tileIconChip, { backgroundColor: 'rgba(130, 113, 72, 0.14)' }]}>
-                    <Feather name="feather" size={18} color={colors.gold} />
-                  </View>
-                  <View style={styles.tileTextCol}>
-                    <Text style={[styles.tileMainLabel, { color: colors.textPrimary }]}>المدائح النبوية</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-left" size={14} color={colors.textMuted} />
-              </Pressable>
-            </View>
+            {quickLinkRows.map((row) => (
+              <View key={row[0].key} style={styles.gridRow}>
+                {row.map((link) => (
+                  <QuickLinkTile
+                    key={link.key}
+                    label={link.label}
+                    accessibilityLabel={link.accessibilityLabel}
+                    icon={link.icon}
+                    chipColor={link.chipColor}
+                    onPress={link.onPress}
+                  />
+                ))}
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -448,36 +294,29 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  hijriCardWrapper: {
-    borderRadius: radius.lg,
-    borderWidth: 0,
-    marginBottom: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 2,
+  cardSpacing: {
+    marginBottom: 12,
   },
-  hijriCardInner: {
+  cardInner: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.base,
-    paddingVertical: 10,
-    zIndex: 2,
+    paddingVertical: 14,
   },
-  hijriPreTitle: {
+  cardPreTitle: {
+    ...cardTextShadow,
     fontFamily: fonts.defaultBold,
     fontSize: 12,
-    color: '#DECFA9',
+    color: CARD_TEXT_MUTED,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   hijriWeekdayCalligraphy: {
+    ...cardTextShadow,
     fontFamily: fonts.hijriWeekday,
     fontSize: 42,
     lineHeight: 48,
-    color: '#FFEED6',
+    color: CARD_TEXT,
     textAlign: 'center',
     writingDirection: 'rtl',
   },
@@ -489,10 +328,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   hijriDayNumber: {
+    ...cardTextShadow,
     fontFamily: fonts.defaultBold,
     fontSize: 26,
     lineHeight: 30,
-    color: '#FCE38A',
+    color: CARD_TEXT_GOLD,
   },
   hijriMonthClip: {
     height: 30,
@@ -502,72 +342,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   hijriMonthCalligraphy: {
+    ...cardTextShadow,
     fontFamily: fonts.hijriMonth,
     fontSize: 28,
     lineHeight: 30,
     marginTop: -2,
+    color: CARD_TEXT,
     textAlign: 'center',
     writingDirection: 'rtl',
   },
   hijriYearText: {
+    ...cardTextShadow,
     fontFamily: fonts.defaultBold,
     fontSize: 15,
     lineHeight: 20,
-    color: '#DECFA9',
-  },
-  cardImageBg: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  cardImageInner: {
-    borderRadius: radius.lg,
-  },
-  cardScrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(18, 14, 10, 0.65)',
-  },
-  resumeWrapper: {
-    borderRadius: radius.lg,
-    borderWidth: 0,
-    marginTop: 4,
-    marginBottom: 8,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  resumeCardInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.base,
-    paddingVertical: 12,
-    zIndex: 2,
-  },
-  resumePreTitle: {
-    fontFamily: fonts.defaultBold,
-    fontSize: 12,
-    color: '#DECFA9',
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    color: CARD_TEXT_MUTED,
   },
   resumeArabicName: {
+    ...cardTextShadow,
     fontFamily: fonts.surahName,
     fontSize: 44,
-    lineHeight: 48,
-    color: '#FFEED6',
+    lineHeight: 50,
+    color: CARD_TEXT,
     textAlign: 'center',
     writingDirection: 'rtl',
   },
   resumeSurahMeta: {
+    ...cardTextShadow,
     fontFamily: fonts.defaultBold,
     fontSize: 16,
     lineHeight: 20,
     marginTop: 3,
     textAlign: 'center',
     writingDirection: 'rtl',
-    color: '#FCE38A',
+    color: CARD_TEXT_GOLD,
   },
   grid: {
     width: '100%',
@@ -579,41 +387,5 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
     width: '100%',
-  },
-  modernTile: {
-    flex: 1,
-    height: 56,
-    alignItems: 'center',
-    borderRadius: radius.xl,
-    borderWidth: 1.2,
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  tileContent: {
-    alignItems: 'center',
-    flexDirection: 'row-reverse',
-    gap: 10,
-  },
-  tileIconChip: {
-    alignItems: 'center',
-    borderRadius: 12,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  tileTextCol: {
-    justifyContent: 'center',
-  },
-  tileMainLabel: {
-    fontFamily: fonts.defaultBold,
-    fontSize: 15,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
 });

@@ -15,9 +15,11 @@ interface Props {
   height: number;
   fontSize: number;
   basmalahText: string;
-  onSelectAyah: (position: { surah: number; ayah: number }) => void;
+  onSelectAyah: (position: { surah: number; ayah: number; page: number }) => void;
   onToggleHeader: () => void;
   isBookmarked?: boolean;
+  selectedAyah?: { surah: number; ayah: number } | null;
+  savedAyah?: { surah: number; ayah: number } | null;
 }
 
 export function MushafPageContainer({
@@ -28,6 +30,8 @@ export function MushafPageContainer({
   onSelectAyah,
   onToggleHeader,
   isBookmarked = false,
+  selectedAyah = null,
+  savedAyah = null,
 }: Props) {
   const { colors, spacing } = useTheme();
   const pageState = useMushafPage(page);
@@ -72,6 +76,8 @@ export function MushafPageContainer({
         onSelectAyah={onSelectAyah}
         onToggleHeader={onToggleHeader}
         isBookmarked={isBookmarked}
+        selectedAyah={selectedAyah}
+        savedAyah={savedAyah}
       />
     </View>
   );

@@ -25,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFEED6",
+        "backgroundColor": "#8F2D23",
         "foregroundImage": "./assets/logo.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -52,7 +52,7 @@
         {
           "image": "./assets/logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#FFEED6"
+          "backgroundColor": "#FAF7F2"
         }
       ],
       "expo-sqlite",

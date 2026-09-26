@@ -20,6 +20,16 @@ export const HIJRI_MONTHS_AR = [
   'ذُو الحِجَّة',
 ] as const;
 
+/** Arabic weekday names, index 0 = Sunday .. 6 = Saturday. */
+export const WEEKDAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] as const;
+
+/**
+ * Ligature key per weekday (index 0 = Sunday .. 6 = Saturday) in
+ * `Elgharib-Days Of Week.ttf`. Keys "1".."6" are Sunday..Friday, but Saturday
+ * is "0": "7" draws الأسبوع, "8" اليوم and "9" أيام الأسبوع.
+ */
+export const WEEKDAY_LIGATURE_KEYS = ['1', '2', '3', '4', '5', '6', '0'] as const;
+
 export interface HijriToday {
   /** Hijri day of month (1..30) */
   dayOfMonth: number;
@@ -29,7 +39,9 @@ export interface HijriToday {
   monthNameAr: string;
   /** Hijri year. */
   year: number;
-  /** Ligature key ("1".."7") for `Elgharib-Days Of Week.ttf`; 1 = Sunday. */
+  /** Day of the week, 0 = Sunday .. 6 = Saturday. */
+  weekday: number;
+  /** Ligature key for `Elgharib-Days Of Week.ttf` (see WEEKDAY_LIGATURE_KEYS). */
   weekdayLigature: string;
   /** Ligature key ("1".."12") for `Elgharib-AYB-Hijri Months.ttf`. */
   monthLigature: string;
@@ -43,7 +55,8 @@ export function getHijriToday(): HijriToday {
     month: mIndex + 1,
     monthNameAr: HIJRI_MONTHS_AR[mIndex] ?? 'رَبِيع الأَوَّل',
     year: now.iYear(),
-    weekdayLigature: String(now.day() + 1),
+    weekday: now.day(),
+    weekdayLigature: WEEKDAY_LIGATURE_KEYS[now.day()],
     monthLigature: String(mIndex + 1),
   };
 }
